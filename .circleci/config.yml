@@ -198,12 +198,23 @@ jobs:
           fingerprints: ["21:e0:8e:7f:71:a1:8b:94:04:84:da:20:62:80:bb:11"]
       - attach_workspace:
           at: ~/
+
+      - run:
+          name: Add back-end ip to ansible inventory
+          command: |
+            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --output text)
+            echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
+            cat .circleci/ansible/inventory.txt
+
       - run:
           name: Configure Server
           command: |
-            cd .circleci/ansible
-            cat inventory.txt
             ansible-playbook -i inventory.txt ./ansible/configure-server.yml
+      
+      - destroy-environment       
   run-migrations:
     docker:
       - image: cimg/node:13.8.0
