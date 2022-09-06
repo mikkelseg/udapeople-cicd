@@ -192,39 +192,19 @@ jobs:
       - image: cimg/base:stable
     steps:
       - checkout
-      - install_awscli
-      - install_ansible
+    
       - add_ssh_keys:
           fingerprints: ["21:e0:8e:7f:71:a1:8b:94:04:84:da:20:62:80:bb:11"]
       - attach_workspace:
           at: ~/
 
-      - run:
-          name: Add back-end ip to ansible inventory
-          command: |
-            BACKEND_PUBLIC_IP=$(aws ec2 describe-instances \
-              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --output text)
-            echo $BACKEND_PUBLIC_IP >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
+      - install_ansible
 
       - run:
           name: Configure Server
           command: |
-            # add environment variables to server
-            echo ENVIRONMENT=production > backend/.env
-            echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> backend/.env
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> backend/.env
-            echo TYPEORM_ENTITIES=$TYPEORM_ENTITIES >> backend/.env
-            echo TYPEORM_HOST=$TYPEORM_HOST >> backend/.env
-            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> backend/.env
-            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> backend/.env
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> backend/.env
-            echo TYPEORM_PORT=$TYPEORM_PORT >> backend/.env
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> backend/.env
-            cat backend/.env
             cd .circleci/ansible
+
             ansible-playbook -i inventory.txt configure-server.yml
             
       - destroy-environment       
